@@ -119,3 +119,28 @@ dependencies {
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
 }
+
+val apkFile = layout.buildDirectory.file("outputs/apk/debug/app-debug.apk").map { it.asFile }
+val targetRootFile = file("${rootDir}/ZenBrowser.apk")
+
+tasks.register("copyApkToRoot") {
+  val srcF = apkFile
+  val dstF = targetRootFile
+  doLast {
+    val source = srcF.get()
+    if (source.exists()) {
+      source.copyTo(dstF, overwrite = true)
+      println("ZenBrowser.apk successfully updated at the project root!")
+    } else {
+      println("Source APK does not exist at path: ${source.absolutePath}")
+    }
+  }
+}
+
+afterEvaluate {
+  tasks.findByName("assembleDebug")?.finalizedBy("copyApkToRoot")
+}
+
+
+
+

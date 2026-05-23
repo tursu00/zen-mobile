@@ -903,11 +903,14 @@ fun ZenSpeedDialHome(
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val preConfiguredSites = listOf(
-        ShortcutItem("Zen Browser", "https://zen-browser.app", Icons.Default.Build, ZenPurple),
-        ShortcutItem("DuckDuckGo", "https://duckduckgo.com", Icons.Default.Info, ZenTeal),
+        ShortcutItem("Zen", "https://zen-browser.app", Icons.Default.Build, ZenPurple),
+        ShortcutItem("DuckGo", "https://duckduckgo.com", Icons.Default.Info, ZenTeal),
         ShortcutItem("GitHub", "https://github.com", Icons.Default.Star, Color.White),
-        ShortcutItem("Wikipedia", "https://wikipedia.org", Icons.Default.List, Color.LightGray),
-        ShortcutItem("Reddit", "https://reddit.com", Icons.Default.Favorite, Color(0xFFFF4500))
+        ShortcutItem("Wikipedia", "https://wikipedia.org", Icons.Default.Info, Color.LightGray),
+        ShortcutItem("Reddit", "https://reddit.com", Icons.Default.Favorite, Color(0xFFFF4500)),
+        ShortcutItem("YouTube", "https://youtube.com", Icons.Default.PlayArrow, Color(0xFFFF0000)),
+        ShortcutItem("Google", "https://google.com", Icons.Default.Search, Color(0xFF4285F4)),
+        ShortcutItem("Portal", "https://yahoo.com", Icons.Default.List, ZenPurpleLight)
     )
 
     LazyColumn(
@@ -1102,47 +1105,57 @@ fun ZenSpeedDialHome(
         }
 
         item {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(preConfiguredSites) { site ->
-                    Column(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onSearchLaunch(site.url) }
-                            .padding(vertical = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                preConfiguredSites.chunked(4).forEach { rowSites ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(ZenCardBG)
-                                .border(width = 1.dp, color = ZenOutlines, shape = RoundedCornerShape(14.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = site.icon,
-                                contentDescription = site.name,
-                                tint = site.color,
-                                modifier = Modifier.size(24.dp)
-                            )
+                        rowSites.forEach { site ->
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable { onSearchLaunch(site.url) }
+                                    .padding(vertical = 12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(54.dp)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(ZenCardBG)
+                                        .border(width = 1.dp, color = ZenOutlines, shape = RoundedCornerShape(16.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = site.icon,
+                                        contentDescription = site.name,
+                                        tint = site.color,
+                                        modifier = Modifier.size(26.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = site.name,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.LightGray,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = site.name,
-                            fontSize = 10.sp,
-                            color = Color.LightGray,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        if (rowSites.size < 4) {
+                            repeat(4 - rowSites.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
                     }
                 }
             }
@@ -1203,6 +1216,7 @@ fun TabsManagerSheetContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
             .height(550.dp)
             .padding(20.dp)
     ) {
@@ -1367,6 +1381,7 @@ fun ExtensionsSheetContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
             .height(550.dp)
             .padding(20.dp)
     ) {
@@ -1502,6 +1517,7 @@ fun BookmarksHistoryContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
             .height(550.dp)
             .padding(20.dp)
     ) {
@@ -1679,6 +1695,7 @@ fun PrivacyArmorContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
             .height(500.dp)
             .padding(20.dp)
     ) {
