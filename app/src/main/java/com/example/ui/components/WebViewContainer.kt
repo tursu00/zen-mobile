@@ -80,8 +80,18 @@ fun WebViewContainer(
     }
 
     // Capture the WebView instance
+    val currentIsAdBlockerActive by rememberUpdatedState(isAdBlockerActive)
+    val currentIsDarkReaderActive by rememberUpdatedState(isDarkReaderActive)
+    val currentIsHttpsOnlyActive by rememberUpdatedState(isHttpsOnlyActive)
+    val currentIsPrivacyShieldActive by rememberUpdatedState(isPrivacyShieldActive)
+    val currentTabStateUpdated by rememberUpdatedState(tab)
+    val currentViewModel by rememberUpdatedState(viewModel)
+
     val webView = remember {
         WebView(context).apply {
+            // Apply hardware-accelerated rendering layer to leverage GPU for buttery smooth 60fps/90fps scrolling
+            setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+
             // Optimize scrollbars and render pipelines to avoid unnecessary recalculation passes
             scrollBarStyle = android.view.View.SCROLLBARS_OUTSIDE_OVERLAY
             isScrollbarFadingEnabled = true
@@ -100,6 +110,11 @@ fun WebViewContainer(
             settings.layoutAlgorithm = android.webkit.WebSettings.LayoutAlgorithm.NORMAL
             settings.textZoom = 100 // Ensure crisp native pixel font density scale
 
+            // Pre-rasterize offscreen web layout content to allow extreme buttery-smooth scrolling
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                settings.offscreenPreRaster = true
+            }
+
             // Mixed content mode for https/http resources
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
@@ -110,7 +125,136 @@ fun WebViewContainer(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
             }
+
+            // Initialize WebViewClient and WebChromeClient ONCE statically to avoid thread drops and freezes
+            webViewClient = object : WebViewClient() {
+                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                    super.onPageStarted(view, url, favicon)
+                    onLoadingStateChanged(true)
+                    onProgressChanged(10)
+                }
+
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    onLoadingStateChanged(false)
+                    onProgressChanged(100)
+
+                    val activeTabInfo = currentTabStateUpdated
+                    val pageTitle = view?.title ?: activeTabInfo.title
+                    val pageUrl = url ?: activeTabInfo.url
+                    currentViewModel.updateTabUrlAndTitle(activeTabInfo.id, pageUrl, pageTitle)
+                    currentViewModel.visitPage(pageTitle, pageUrl)
+
+                    // Inject Dark CSS dynamically based on active state block lookup on load finished
+                    if (currentIsDarkReaderActive) {
+                        val darkCssInject = """
+                            (function() {
+                                var style = document.getElementById('zen-dark-reader-styles');
+                                if (!style) {
+                                    style = document.createElement('style');
+                                    style.id = 'zen-dark-reader-styles';
+                                    style.innerHTML = "html, body, iframe, div, section, p, li, blockquote { background-color: #050609 !important; color: #f1f5f9 !important; border-color: #1e2235 !important; } a { color: #60a5fa !important; } h1, h2, h3, h4, h5, h6, b, strong, val { color: #ffffff !important; } img, video, canvas { filter: brightness(0.85) contrast(1.05) !important; }";
+                                    document.head.appendChild(style);
+                                }
+                            })();
+                        """.trimIndent()
+                        view?.evaluateJavascript(darkCssInject, null)
+                    } else {
+                        val lightModeTheme = """
+                            (function() {
+                                var style = document.getElementById('zen-dark-reader-styles');
+                                if (style) {
+                                    style.remove();
+                                }
+                            })();
+                        """.trimIndent()
+                        view?.evaluateJavascript(lightModeTheme, null)
+                    }
+                }
+
+                override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
+                    super.doUpdateVisitedHistory(view, url, isReload)
+                }
+
+                override fun shouldInterceptRequest(
+                    view: WebView?,
+                    request: WebResourceRequest?
+                ): WebResourceResponse? {
+                    val urlString = request?.url?.toString() ?: return null
+                    val host = request.url?.host ?: ""
+
+                    // HTTPS-Only redirection
+                    if (currentIsHttpsOnlyActive && request.url?.scheme == "http") {
+                        val upgradedUrl = request.url.buildUpon().scheme("https").build().toString()
+                        view?.post {
+                            currentViewModel.incrementTrackerCount()
+                        }
+                        try {
+                            val responseStream = ByteArrayInputStream("".toByteArray())
+                            return WebResourceResponse("text/plain", "UTF-8", 307, "Temporary Redirect", mapOf("Location" to upgradedUrl), responseStream)
+                        } catch (e: Exception) {}
+                    }
+
+                    // Tracker Intercept & Block
+                    if (currentIsAdBlockerActive || currentIsPrivacyShieldActive) {
+                        val isTracker = AD_TRACKER_DOMAINS.any { domain ->
+                            host.contains(domain, ignoreCase = true) || urlString.contains(domain, ignoreCase = true)
+                        }
+                        if (isTracker) {
+                            view?.post {
+                                currentViewModel.incrementTrackerCount()
+                            }
+                            val emptyStream = ByteArrayInputStream("".toByteArray())
+                            return WebResourceResponse("text/javascript", "UTF-8", emptyStream)
+                        }
+                    }
+
+                    return super.shouldInterceptRequest(view, request)
+                }
+
+                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                    val uri = request?.url ?: return false
+                    if (uri.scheme == "http" || uri.scheme == "https") {
+                        return false
+                    }
+                    return true
+                }
+            }
+
+            webChromeClient = object : WebChromeClient() {
+                override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                    super.onProgressChanged(view, newProgress)
+                    onProgressChanged(newProgress)
+                }
+            }
         }
+    }
+
+    // Toggle Dark Reader styling dynamically and instantly in real-time without reloading
+    LaunchedEffect(isDarkReaderActive) {
+        val darkCssInject = if (isDarkReaderActive) {
+            """
+                (function() {
+                    var style = document.getElementById('zen-dark-reader-styles');
+                    if (!style) {
+                        style = document.createElement('style');
+                        style.id = 'zen-dark-reader-styles';
+                        style.innerHTML = "html, body, iframe, div, section, p, li, blockquote { background-color: #050609 !important; color: #f1f5f9 !important; border-color: #1e2235 !important; } a { color: #60a5fa !important; } h1, h2, h3, h4, h5, h6, b, strong, val { color: #ffffff !important; } img, video, canvas { filter: brightness(0.85) contrast(1.05) !important; }";
+                        document.head.appendChild(style);
+                    }
+                })();
+            """.trimIndent()
+        } else {
+            """
+                (function() {
+                    var style = document.getElementById('zen-dark-reader-styles');
+                    if (style) {
+                        style.remove();
+                    }
+                })();
+            """.trimIndent()
+        }
+        webView.evaluateJavascript(darkCssInject, null)
     }
 
     // Sync extension properties and User Agent configurations dynamically
@@ -128,6 +272,11 @@ fun WebViewContainer(
     val currentTabState by rememberUpdatedState(tab)
 
     var canGoBack by remember { mutableStateOf(false) }
+
+    // Sync back navigation local states
+    LaunchedEffect(webView.url) {
+        canGoBack = webView.canGoBack()
+    }
 
     // Intercept physical system back press
     BackHandler(enabled = canGoBack) {
@@ -152,128 +301,6 @@ fun WebViewContainer(
         // Prevent recursive reloading of same URL
         if (normalizedCurrent != normalizedTab && tab.url.isNotEmpty()) {
             webView.loadUrl(tab.url)
-        }
-    }
-
-    // Configure client-side interceptors & filters
-    LaunchedEffect(isAdBlockerActive, isDarkReaderActive, isHttpsOnlyActive, isPrivacyShieldActive, tab.id) {
-        webView.webViewClient = object : WebViewClient() {
-            
-            // Handle page loading events
-            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                super.onPageStarted(view, url, favicon)
-                onLoadingStateChanged(true)
-                onProgressChanged(10)
-                canGoBack = view?.canGoBack() ?: false
-            }
-
-            override fun onPageFinished(view: WebView?, url: String?) {
-                super.onPageFinished(view, url)
-                onLoadingStateChanged(false)
-                onProgressChanged(100)
-                canGoBack = view?.canGoBack() ?: false
-
-                // Backprop url & title changes to our state machine
-                val pageTitle = view?.title ?: currentTabState.title
-                val pageUrl = url ?: currentTabState.url
-                viewModel.updateTabUrlAndTitle(currentTabState.id, pageUrl, pageTitle)
-                viewModel.visitPage(pageTitle, pageUrl)
-
-                // 2. Dark Reader Inject CSS filter
-                if (isDarkReaderActive) {
-                    val darkCssInject = """
-                        (function() {
-                            var style = document.getElementById('zen-dark-reader-styles');
-                            if (!style) {
-                                style = document.createElement('style');
-                                style.id = 'zen-dark-reader-styles';
-                                style.innerHTML = "html, body, iframe, div, section, p, li, blockquote { background-color: #1a1a24 !important; color: #f0f0f5 !important; border-color: #2a2a35 !important; } a { color: #bb86fc !important; } h1, h2, h3, h4, h5, h6, b, strong, val { color: #fdfdfd !important; } img, video, canvas { filter: brightness(0.85) contrast(1.05) !important; }";
-                                document.head.appendChild(style);
-                            }
-                        })();
-                    """.trimIndent()
-                    view?.evaluateJavascript(darkCssInject, null)
-                } else {
-                    // Try to remove styling if present
-                    val lightModeTheme = """
-                        (function() {
-                            var style = document.getElementById('zen-dark-reader-styles');
-                            if (style) {
-                                style.remove();
-                            }
-                        })();
-                    """.trimIndent()
-                    view?.evaluateJavascript(lightModeTheme, null)
-                }
-            }
-
-            override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
-                super.doUpdateVisitedHistory(view, url, isReload)
-                canGoBack = view?.canGoBack() ?: false
-            }
-
-            // Ad blocking & tracker filtering interception (uBlock Sim & Privacy Shield combo)
-            override fun shouldInterceptRequest(
-                view: WebView?,
-                request: WebResourceRequest?
-            ): WebResourceResponse? {
-                val urlString = request?.url?.toString() ?: return null
-                val host = request.url?.host ?: ""
-
-                // 1. HTTPS-Only safe redirection
-                if (isHttpsOnlyActive && request.url?.scheme == "http") {
-                    val upgradedUrl = request.url.buildUpon().scheme("https").build().toString()
-                    // Report a secure block/upgrade
-                    view?.post {
-                        viewModel.incrementTrackerCount()
-                    }
-                    // Return redirection response
-                    try {
-                        val responseStream = ByteArrayInputStream("".toByteArray())
-                        return WebResourceResponse("text/plain", "UTF-8", 307, "Temporary Redirect", mapOf("Location" to upgradedUrl), responseStream)
-                    } catch (e: Exception) {
-                        // fallback
-                    }
-                }
-
-                // 2. Tracker Intercept & Blocks (uBlock / Privacy shield active)
-                if (isAdBlockerActive || isPrivacyShieldActive) {
-                    val isTracker = AD_TRACKER_DOMAINS.any { domain -> 
-                        host.contains(domain, ignoreCase = true) || urlString.contains(domain, ignoreCase = true) 
-                    }
-                    if (isTracker) {
-                        // Increment dynamic interface block counter
-                        view?.post {
-                            viewModel.incrementTrackerCount()
-                        }
-                        // Stop actual loading of tracker domain asset, returning empty content
-                        val emptyStream = ByteArrayInputStream("".toByteArray())
-                        return WebResourceResponse("text/javascript", "UTF-8", emptyStream)
-                    }
-                }
-
-                return super.shouldInterceptRequest(view, request)
-            }
-
-            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                val uri = request?.url ?: return false
-                val url = uri.toString()
-                
-                // Allow direct navigation of links
-                if (uri.scheme == "http" || uri.scheme == "https") {
-                    return false
-                }
-                
-                // Block/redirect intent protocols or non-web schemas
-                return true
-            }
-        }
-
-        webView.webChromeClient = object : WebChromeClient() {
-            override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                super.onProgressChanged(view, newProgress)
-                onProgressChanged(newProgress)
-            }
         }
     }
 

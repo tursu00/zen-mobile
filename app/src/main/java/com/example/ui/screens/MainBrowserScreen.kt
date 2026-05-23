@@ -251,7 +251,8 @@ fun MainBrowserScreen(viewModel: BrowserViewModel) {
                         onMenuClick = { showExtensionsSheet = true },
                         onWorkspaceClick = { showWorkspaceDrawer = true },
                         onHeartClick = { showBookmarksHistorySheet = true },
-                        onShieldClick = { showPrivacyArmorSheet = true }
+                        onShieldClick = { showPrivacyArmorSheet = true },
+                        modifier = Modifier.navigationBarsPadding()
                     )
                 }
             },
@@ -275,7 +276,8 @@ fun MainBrowserScreen(viewModel: BrowserViewModel) {
                         onMenuClick = { showExtensionsSheet = true },
                         onWorkspaceClick = { showWorkspaceDrawer = true },
                         onHeartClick = { showBookmarksHistorySheet = true },
-                        onShieldClick = { showPrivacyArmorSheet = true }
+                        onShieldClick = { showPrivacyArmorSheet = true },
+                        modifier = Modifier.statusBarsPadding()
                     )
                 }
             }
@@ -707,14 +709,19 @@ fun BrowserCommandLine(
     onMenuClick: () -> Unit,
     onWorkspaceClick: () -> Unit,
     onHeartClick: () -> Unit,
-    onShieldClick: () -> Unit
+    onShieldClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .background(ZenDarkBG)
-            .border(width = 1.dp, color = ZenOutlines, shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp))
-            .padding(vertical = 8.dp, horizontal = 12.dp)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(ZenDarkBG, ZenCardBG.copy(alpha = 0.98f))
+                )
+            )
+            .border(width = 1.dp, color = ZenOutlines, shape = RoundedCornerShape(0.dp))
+            .padding(top = 10.dp, bottom = 10.dp, start = 14.dp, end = 14.dp)
     ) {
         // Upper line containing Address Bar input
         Row(
@@ -725,18 +732,20 @@ fun BrowserCommandLine(
             IconButton(
                 onClick = onWorkspaceClick,
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(12.dp))
                     .background(ZenCardBG)
+                    .border(width = 1.dp, color = ZenOutlines, shape = RoundedCornerShape(12.dp))
             ) {
                 Icon(
                     imageVector = Icons.Default.List,
                     contentDescription = "Workspaces",
-                    tint = ZenPurpleLight
+                    tint = ZenPurpleLight,
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             // Address Card Input
             Row(
@@ -744,14 +753,14 @@ fun BrowserCommandLine(
                     .weight(1f)
                     .height(46.dp)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(ZenCardBG)
+                    .background(ZenCardBG.copy(alpha = 0.85f))
                     .border(
                         width = 1.dp,
-                        color = if (isPageLoading) ZenTeal.copy(alpha = 0.4f) else ZenOutlines,
+                        color = if (isPageLoading) ZenTeal else ZenOutlines,
                         shape = RoundedCornerShape(24.dp)
                     )
                     .clickable { onInputFocused() }
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Safe Lock / Shield icon representing HTTPS State
@@ -763,7 +772,7 @@ fun BrowserCommandLine(
                     modifier = Modifier.size(16.dp)
                 )
 
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(6.dp))
 
                 // Custom search/url text field
                 TextField(
@@ -807,7 +816,7 @@ fun BrowserCommandLine(
                         .clip(RoundedCornerShape(12.dp))
                         .background(if (blockedCount > 0) ZenTeal.copy(alpha = 0.15f) else Color.Transparent)
                         .clickable { onShieldClick() }
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -818,7 +827,7 @@ fun BrowserCommandLine(
                             modifier = Modifier.size(14.dp)
                         )
                         if (blockedCount > 0) {
-                            Spacer(modifier = Modifier.width(2.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = blockedCount.toString(),
                                 fontSize = 10.sp,
@@ -830,25 +839,31 @@ fun BrowserCommandLine(
                 }
             }
 
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             // Favorites and search launching buttons
             IconButton(
                 onClick = onGoClick,
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(ZenPurple.copy(alpha = 0.8f))
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(ZenPurple, ZenPurpleLight)
+                        )
+                    )
+                    .border(1.dp, ZenPurpleLight.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Go",
-                    tint = Color.White
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Lower Navigation Line
         Row(
@@ -869,16 +884,18 @@ fun BrowserCommandLine(
             // Modern Tab Counter Box
             Box(
                 modifier = Modifier
-                    .size(34.dp)
-                    .border(width = 1.5.dp, color = ZenPurpleLight, shape = RoundedCornerShape(8.dp))
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(ZenPurple.copy(alpha = 0.15f))
+                    .border(width = 1.2.dp, color = ZenPurpleLight, shape = RoundedCornerShape(8.dp))
                     .clickable { onTabsClick() },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = tabsCount.toString(),
-                    color = ZenPurpleLight,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp
+                    color = Color.White,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 11.sp
                 )
             }
 
@@ -932,31 +949,40 @@ fun ZenSpeedDialHome(
             // Zen Floating Logo Glowing Concept
             Box(
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(24.dp))
+                    .size(86.dp)
+                    .clip(RoundedCornerShape(26.dp))
                     .background(
-                        Brush.radialGradient(
-                            colors = listOf(ZenPurple, Color.Transparent)
+                        Brush.verticalGradient(
+                            colors = listOf(ZenPurple, ZenPurple.copy(alpha = 0.2f))
                         )
                     )
-                    .border(2.dp, ZenPurpleLight, RoundedCornerShape(24.dp)),
+                    .border(
+                        width = 2.dp,
+                        brush = Brush.linearGradient(colors = listOf(ZenPurpleLight, ZenTeal)),
+                        shape = RoundedCornerShape(26.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Info,
                     contentDescription = "Zen Browser Logo",
                     tint = Color.White,
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier.size(46.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
+            val titleGradient = Brush.linearGradient(
+                colors = listOf(Color.White, ZenPurpleLight, ZenTeal)
+            )
             Text(
                 text = "Zen Mobile",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color.White,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Black,
+                style = TextStyle(
+                    brush = titleGradient
+                ),
                 textAlign = TextAlign.Center
             )
             Text(
@@ -964,7 +990,7 @@ fun ZenSpeedDialHome(
                 fontSize = 11.sp,
                 color = Color.Gray,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
+                modifier = Modifier.padding(top = 6.dp, bottom = 24.dp)
             )
         }
 
@@ -975,7 +1001,7 @@ fun ZenSpeedDialHome(
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(width = 0.5.dp, color = ZenOutlines, shape = RoundedCornerShape(16.dp))
+                    .border(width = 1.dp, color = ZenOutlines, shape = RoundedCornerShape(16.dp))
                     .padding(bottom = 16.dp)
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
@@ -998,14 +1024,14 @@ fun ZenSpeedDialHome(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) ZenPurple.copy(alpha = 0.3f) else ZenCardBG)
+                                    .background(if (isSelected) ZenPurple.copy(alpha = 0.25f) else ZenCardBG)
                                     .border(
                                         width = 1.dp,
-                                        color = if (isSelected) ZenPurpleLight else Color.Transparent,
+                                        color = if (isSelected) ZenPurpleLight else ZenOutlines,
                                         shape = RoundedCornerShape(12.dp)
                                     )
                                     .clickable { onSearchEngineSelected(engine) }
-                                    .padding(vertical = 10.dp, horizontal = 4.dp),
+                                    .padding(vertical = 12.dp, horizontal = 4.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1040,11 +1066,15 @@ fun ZenSpeedDialHome(
         // Mid Stats Analytics Card
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = ZenCardBG),
+                colors = CardDefaults.cardColors(containerColor = ZenCardBG.copy(alpha = 0.85f)),
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(width = 0.5.dp, color = ZenOutlines, shape = RoundedCornerShape(20.dp))
+                    .border(
+                        width = 1.2.dp,
+                        brush = Brush.linearGradient(colors = listOf(ZenOutlines, ZenTeal.copy(alpha = 0.4f))),
+                        shape = RoundedCornerShape(20.dp)
+                    )
                     .padding(bottom = 24.dp)
             ) {
                 Row(
@@ -1126,17 +1156,25 @@ fun ZenSpeedDialHome(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(54.dp)
+                                        .size(56.dp)
                                         .clip(RoundedCornerShape(16.dp))
-                                        .background(ZenCardBG)
-                                        .border(width = 1.dp, color = ZenOutlines, shape = RoundedCornerShape(16.dp)),
+                                        .background(
+                                            Brush.radialGradient(
+                                                colors = listOf(site.color.copy(alpha = 0.15f), ZenCardBG)
+                                            )
+                                        )
+                                        .border(
+                                            width = 1.dp,
+                                            color = site.color.copy(alpha = 0.25f),
+                                            shape = RoundedCornerShape(16.dp)
+                                        ),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = site.icon,
                                         contentDescription = site.name,
                                         tint = site.color,
-                                        modifier = Modifier.size(26.dp)
+                                        modifier = Modifier.size(24.dp)
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -1183,10 +1221,12 @@ fun ZenSpeedDialHome(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                        .heightIn(min = 52.dp)
+                        .clip(RoundedCornerShape(14.dp))
                         .background(ZenCardBG)
+                        .border(width = 0.8.dp, color = ZenOutlines, shape = RoundedCornerShape(14.dp))
                         .clickable { onSearchLaunch(bookmark.url) }
-                        .padding(12.dp),
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(imageVector = Icons.Default.Favorite, contentDescription = "Yer imi", tint = ZenPurpleLight, modifier = Modifier.size(16.dp))
