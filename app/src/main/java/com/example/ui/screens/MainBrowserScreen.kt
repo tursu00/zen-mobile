@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,8 +31,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
@@ -710,33 +715,45 @@ fun BrowserCommandLine(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(ZenDarkBG, ZenCardBG.copy(alpha = 0.98f))
-                )
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(ZenCardBG.copy(alpha = 0.95f))
+            .border(
+                width = 1.2.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        ZenPurpleLight.copy(alpha = 0.4f),
+                        ZenOutlines,
+                        ZenTeal.copy(alpha = 0.25f)
+                    )
+                ),
+                shape = RoundedCornerShape(24.dp)
             )
-            .border(width = 1.dp, color = ZenOutlines, shape = RoundedCornerShape(0.dp))
-            .padding(top = 10.dp, bottom = 10.dp, start = 14.dp, end = 14.dp)
+            .padding(top = 10.dp, bottom = 10.dp, start = 12.dp, end = 12.dp)
     ) {
         // Upper line containing Address Bar input
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Workspace selector button
+            // Workspace selector button with elegant round portal style
             IconButton(
                 onClick = onWorkspaceClick,
                 modifier = Modifier
                     .size(42.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(ZenCardBG)
-                    .border(width = 1.dp, color = ZenOutlines, shape = RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(ZenDarkBG)
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.linearGradient(colors = listOf(ZenPurpleLight.copy(alpha = 0.5f), Color.Transparent)),
+                        shape = RoundedCornerShape(14.dp)
+                    )
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.List,
                     contentDescription = "Workspaces",
                     tint = ZenPurpleLight,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
 
@@ -747,15 +764,15 @@ fun BrowserCommandLine(
                 modifier = Modifier
                     .weight(1f)
                     .height(46.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(ZenCardBG.copy(alpha = 0.85f))
+                    .clip(RoundedCornerShape(23.dp))
+                    .background(ZenDarkBG.copy(alpha = 0.8f))
                     .border(
                         width = 1.dp,
                         color = if (isPageLoading) ZenTeal else ZenOutlines,
-                        shape = RoundedCornerShape(24.dp)
+                        shape = RoundedCornerShape(23.dp)
                     )
                     .clickable { onInputFocused() }
-                    .padding(horizontal = 14.dp),
+                    .padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Safe Lock / Shield icon representing HTTPS State
@@ -764,7 +781,7 @@ fun BrowserCommandLine(
                     imageVector = if (isSecure) Icons.Default.Lock else Icons.Default.Warning,
                     contentDescription = "Secure Status",
                     tint = if (isSecure) ZenTeal else Color.Gray,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(14.dp)
                 )
 
                 Spacer(modifier = Modifier.width(6.dp))
@@ -775,9 +792,9 @@ fun BrowserCommandLine(
                     onValueChange = onUrlChange,
                     placeholder = {
                         Text(
-                            text = "Arama yapın veya URL girin",
+                            text = "Arayın veya URL girin...",
                             color = Color.Gray,
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             maxLines = 1
                         )
                     },
@@ -796,7 +813,7 @@ fun BrowserCommandLine(
                         .weight(1.3f)
                         .fillMaxHeight(),
                     singleLine = true,
-                    textStyle = TextStyle(fontSize = 13.sp),
+                    textStyle = TextStyle(fontSize = 12.sp),
                     keyboardOptions = KeyboardOptions(
                         imeAction = ImeAction.Go
                     ),
@@ -808,10 +825,10 @@ fun BrowserCommandLine(
                 // Privacy Shield glowing count marker!
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(10.dp))
                         .background(if (blockedCount > 0) ZenTeal.copy(alpha = 0.15f) else Color.Transparent)
                         .clickable { onShieldClick() }
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(horizontal = 6.dp, vertical = 3.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -819,13 +836,13 @@ fun BrowserCommandLine(
                             imageVector = Icons.Default.Info,
                             contentDescription = "Privacy Shield",
                             tint = if (blockedCount > 0) ZenTeal else Color.LightGray,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(12.dp)
                         )
                         if (blockedCount > 0) {
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
                             Text(
                                 text = blockedCount.toString(),
-                                fontSize = 10.sp,
+                                fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = ZenTeal
                             )
@@ -841,24 +858,24 @@ fun BrowserCommandLine(
                 onClick = onGoClick,
                 modifier = Modifier
                     .size(42.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(14.dp))
                     .background(
                         Brush.linearGradient(
                             colors = listOf(ZenPurple, ZenPurpleLight)
                         )
                     )
-                    .border(1.dp, ZenPurpleLight.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                    .border(1.dp, ZenPurpleLight.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Go",
                     tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Lower Navigation Line
         Row(
@@ -867,19 +884,19 @@ fun BrowserCommandLine(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBackPressed) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri", tint = Color.LightGray)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri", tint = Color.LightGray, modifier = Modifier.size(20.dp))
             }
             IconButton(onClick = onShieldClick) {
-                Icon(Icons.Default.Info, contentDescription = "Kalkan", tint = ZenTeal)
+                Icon(Icons.Default.Info, contentDescription = "Kalkan", tint = ZenTeal, modifier = Modifier.size(20.dp))
             }
             IconButton(onClick = onHeartClick) {
-                Icon(Icons.Default.Favorite, contentDescription = "Yer imleri", tint = Color.LightGray)
+                Icon(Icons.Default.Favorite, contentDescription = "Yer imleri", tint = Color.LightGray, modifier = Modifier.size(20.dp))
             }
             
             // Modern Tab Counter Box
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(28.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(ZenPurple.copy(alpha = 0.15f))
                     .border(width = 1.2.dp, color = ZenPurpleLight, shape = RoundedCornerShape(8.dp))
@@ -895,7 +912,7 @@ fun BrowserCommandLine(
             }
 
             IconButton(onClick = onMenuClick) {
-                Icon(Icons.Default.MoreVert, contentDescription = "Eklentiler", tint = Color.LightGray)
+                Icon(Icons.Default.MoreVert, contentDescription = "Eklentiler", tint = Color.LightGray, modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -928,42 +945,82 @@ fun ZenSpeedDialHome(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
+            .drawBehind {
+                // Drawing beautiful blurry glowing circles for ambient atmosphere
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(ZenPurple.copy(alpha = 0.16f), Color.Transparent),
+                        center = Offset(0f, 0f),
+                        radius = size.width * 0.9f
+                    )
+                )
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(ZenTeal.copy(alpha = 0.12f), Color.Transparent),
+                        center = Offset(size.width, size.height * 0.3f),
+                        radius = size.width * 0.8f
+                    )
+                )
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0xFF8B5CF6).copy(alpha = 0.08f), Color.Transparent),
+                        center = Offset(size.width * 0.3f, size.height * 0.7f),
+                        radius = size.width * 0.7f
+                    )
+                )
+            }
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(ZenDarkBG, Color(0xFF131322))
+                    colors = listOf(ZenDarkBG, Color(0xFF090A0F), Color(0xFF131322))
                 )
             )
-            .padding(24.dp),
+            .padding(horizontal = 20.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
         // Elegant Space Top Cap
         item {
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(30.dp))
             
             // Zen Floating Logo Glowing Concept
             Box(
                 modifier = Modifier
-                    .size(86.dp)
-                    .clip(RoundedCornerShape(26.dp))
+                    .size(92.dp)
+                    .clip(RoundedCornerShape(28.dp))
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(ZenPurple, ZenPurple.copy(alpha = 0.2f))
+                            colors = listOf(ZenCardBG, ZenDarkBG)
                         )
                     )
                     .border(
-                        width = 2.dp,
-                        brush = Brush.linearGradient(colors = listOf(ZenPurpleLight, ZenTeal)),
-                        shape = RoundedCornerShape(26.dp)
+                        width = 1.5.dp,
+                        brush = Brush.linearGradient(colors = listOf(ZenPurple, ZenTeal)),
+                        shape = RoundedCornerShape(28.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Zen Browser Logo",
-                    tint = Color.White,
-                    modifier = Modifier.size(46.dp)
-                )
+                // Highly skilled custom canvas to draw Zen Browser logo
+                Canvas(modifier = Modifier.size(52.dp)) {
+                    val strokeWidth = 5.dp.toPx()
+                    drawArc(
+                        brush = Brush.sweepGradient(
+                            colors = listOf(ZenPurple, ZenTeal, ZenPurpleLight, ZenPurple)
+                        ),
+                        startAngle = -45f,
+                        sweepAngle = 270f,
+                        useCenter = false,
+                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                    )
+                    drawArc(
+                        brush = Brush.sweepGradient(
+                            colors = listOf(ZenTeal, ZenPurpleLight, Color(0xFF8B5CF6), ZenTeal)
+                        ),
+                        startAngle = 135f,
+                        sweepAngle = 260f,
+                        useCenter = false,
+                        style = Stroke(width = strokeWidth * 0.6f, cap = StrokeCap.Round)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(18.dp))
@@ -981,22 +1038,122 @@ fun ZenSpeedDialHome(
                 textAlign = TextAlign.Center
             )
             Text(
-                text = "Tamamen Şifreli • Firefox Gecko Tabanlı Sezgisel Sınırsız Güç",
+                text = "Tamamen Şifreli • Firefox Gecko Tabanlı Sınırsız Gizlilik",
                 fontSize = 11.sp,
                 color = Color.Gray,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 6.dp, bottom = 24.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
             )
+        }
+
+        // --- Centered Glass Floating Search Bar on homepage ---
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 20.dp)
+                    .height(54.dp)
+                    .clip(RoundedCornerShape(27.dp))
+                    .background(ZenCardBG.copy(alpha = 0.85f))
+                    .border(
+                        width = 1.2.dp,
+                        brush = Brush.linearGradient(colors = listOf(ZenPurpleLight.copy(alpha = 0.4f), ZenOutlines)),
+                        shape = RoundedCornerShape(27.dp)
+                    )
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Arama",
+                    tint = ZenPurpleLight,
+                    modifier = Modifier.size(20.dp)
+                )
+                
+                Spacer(modifier = Modifier.width(10.dp))
+                
+                TextField(
+                    value = queryText,
+                    onValueChange = { queryText = it },
+                    placeholder = {
+                        Text(
+                            text = "Arayın veya web adresi yazın...",
+                            color = Color.Gray,
+                            fontSize = 13.sp
+                        )
+                    },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        errorContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.LightGray
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    singleLine = true,
+                    textStyle = TextStyle(fontSize = 13.sp),
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Search
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onSearch = {
+                            if (queryText.isNotBlank()) {
+                                onSearchLaunch(queryText)
+                                focusManager.clearFocus()
+                                keyboardController?.hide()
+                            }
+                        }
+                    )
+                )
+                
+                if (queryText.isNotEmpty()) {
+                    IconButton(onClick = { queryText = "" }) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = "Temizle",
+                            tint = Color.Gray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+                
+                IconButton(
+                    onClick = {
+                        if (queryText.isNotBlank()) {
+                            onSearchLaunch(queryText)
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                        }
+                    },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(ZenPurple)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Git",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
         }
 
         // --- Active Search Engine Selection Header ---
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = ZenDarkBG),
-                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = ZenDarkBG.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(20.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(width = 1.dp, color = ZenOutlines, shape = RoundedCornerShape(16.dp))
+                    .border(width = 1.dp, color = ZenOutlines, shape = RoundedCornerShape(20.dp))
                     .padding(bottom = 16.dp)
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
@@ -1019,9 +1176,9 @@ fun ZenSpeedDialHome(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) ZenPurple.copy(alpha = 0.25f) else ZenCardBG)
+                                    .background(if (isSelected) ZenPurple.copy(alpha = 0.25f) else ZenCardBG.copy(alpha = 0.6f))
                                     .border(
-                                        width = 1.dp,
+                                        width = 1.2.dp,
                                         color = if (isSelected) ZenPurpleLight else ZenOutlines,
                                         shape = RoundedCornerShape(12.dp)
                                     )
@@ -1038,7 +1195,7 @@ fun ZenSpeedDialHome(
                                             else -> Icons.Default.PlayArrow
                                         },
                                         contentDescription = engine,
-                                        tint = if (isSelected) ZenPurpleLight else Color.Gray,
+                                        tint = if (isSelected) ZenTeal else Color.Gray,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
@@ -1070,7 +1227,7 @@ fun ZenSpeedDialHome(
                         brush = Brush.linearGradient(colors = listOf(ZenOutlines, ZenTeal.copy(alpha = 0.4f))),
                         shape = RoundedCornerShape(20.dp)
                     )
-                    .padding(bottom = 24.dp)
+                    .padding(bottom = 20.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -1117,7 +1274,7 @@ fun ZenSpeedDialHome(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp),
+                    .padding(bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -1131,13 +1288,13 @@ fun ZenSpeedDialHome(
 
         item {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 preConfiguredSites.chunked(4).forEach { rowSites ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         rowSites.forEach { site ->
                             Column(
@@ -1145,33 +1302,11 @@ fun ZenSpeedDialHome(
                                     .weight(1f)
                                     .clip(RoundedCornerShape(16.dp))
                                     .clickable { onSearchLaunch(site.url) }
-                                    .padding(vertical = 12.dp),
+                                    .padding(vertical = 8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(56.dp)
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(
-                                            Brush.radialGradient(
-                                                colors = listOf(site.color.copy(alpha = 0.15f), ZenCardBG)
-                                            )
-                                        )
-                                        .border(
-                                            width = 1.dp,
-                                            color = site.color.copy(alpha = 0.25f),
-                                            shape = RoundedCornerShape(16.dp)
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = site.icon,
-                                        contentDescription = site.name,
-                                        tint = site.color,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
+                                ShortcutIcon(name = site.name, brandColor = site.color)
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = site.name,
@@ -1200,7 +1335,7 @@ fun ZenSpeedDialHome(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp, bottom = 8.dp),
+                        .padding(top = 20.dp, bottom = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -1232,6 +1367,118 @@ fun ZenSpeedDialHome(
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun ShortcutIcon(name: String, brandColor: Color) {
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(ZenCardBG, ZenDarkBG.copy(alpha = 0.6f))
+                )
+            )
+            .border(
+                width = 1.2.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        brandColor.copy(alpha = 0.5f),
+                        ZenOutlines,
+                        brandColor.copy(alpha = 0.1f)
+                    )
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        when (name) {
+            "Zen" -> {
+                Canvas(modifier = Modifier.size(24.dp)) {
+                    drawArc(
+                        brush = Brush.sweepGradient(colors = listOf(ZenPurple, ZenTeal, ZenPurple)),
+                        startAngle = 0f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                    )
+                }
+            }
+            "DuckGo" -> {
+                Text(
+                    text = "🦆",
+                    fontSize = 24.sp
+                )
+            }
+            "GitHub" -> {
+                Text(
+                    text = "GH",
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 18.sp,
+                    letterSpacing = (-1).sp
+                )
+            }
+            "Wikipedia" -> {
+                Text(
+                    text = "W",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp
+                )
+            }
+            "Reddit" -> {
+                Text(
+                    text = "r/",
+                    color = brandColor,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 20.sp,
+                    letterSpacing = (-0.5).sp
+                )
+            }
+            "YouTube" -> {
+                Box(
+                    modifier = Modifier
+                        .size(26.dp, 18.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color(0xFFFF0000)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+            }
+            "Google" -> {
+                Text(
+                    text = "G",
+                    color = brandColor,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 22.sp
+                )
+            }
+            "Portal" -> {
+                Text(
+                    text = "Ω",
+                    color = ZenPurpleLight,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 20.sp
+                )
+            }
+            else -> {
+                Text(
+                    text = name.take(1).uppercase(),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
             }
         }
     }
