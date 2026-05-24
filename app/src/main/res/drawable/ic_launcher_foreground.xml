@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/zen_portal_icon_1779547449873"
+        android:drawable="@drawable/zen_launcher_logo_1779572725555"
         android:gravity="center" />
 </layer-list>

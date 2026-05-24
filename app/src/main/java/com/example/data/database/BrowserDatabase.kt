@@ -53,7 +53,7 @@ abstract class BrowserDatabase : RoomDatabase() {
                         db.execSQL("INSERT OR REPLACE INTO tabs (id, title, url, workspaceId, isActive, timestamp) VALUES (1, 'Zen Başlangıç', 'https://duckduckgo.com', 'personal', 1, 1716474968000)")
                     }
                 })
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
                 INSTANCE = instance
                 instance

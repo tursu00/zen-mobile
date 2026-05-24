@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -82,7 +83,6 @@ fun MainBrowserScreen(viewModel: BrowserViewModel) {
     var showExtensionsSheet by remember { mutableStateOf(false) }
     var showBookmarksHistorySheet by remember { mutableStateOf(false) }
     var showPrivacyArmorSheet by remember { mutableStateOf(false) }
-    var showWorkspaceDrawer by remember { mutableStateOf(false) }
 
     // Loading & progress states
     var loadingProgress by remember { mutableStateOf(0) }
@@ -104,15 +104,10 @@ fun MainBrowserScreen(viewModel: BrowserViewModel) {
 
     // Modern Drawer state
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    LaunchedEffect(showWorkspaceDrawer) {
-        if (showWorkspaceDrawer) drawerState.open() else drawerState.close()
-    }
-    LaunchedEffect(drawerState.currentValue) {
-        showWorkspaceDrawer = drawerState.isOpen
-    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = false,
         drawerContent = {
             ModalDrawerSheet(
                 drawerContainerColor = ZenDarkBG,
@@ -139,7 +134,7 @@ fun MainBrowserScreen(viewModel: BrowserViewModel) {
                         modifier = Modifier.padding(bottom = 24.dp)
                     )
 
-                    Divider(color = ZenOutlines, thickness = 1.dp, modifier = Modifier.padding(bottom = 16.dp))
+                    HorizontalDivider(color = ZenOutlines, thickness = 1.dp, modifier = Modifier.padding(bottom = 16.dp))
 
                     // Workspace Item List
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -154,7 +149,7 @@ fun MainBrowserScreen(viewModel: BrowserViewModel) {
                                     .background(if (isSelected) ZenCardBG else Color.Transparent)
                                     .clickable {
                                         viewModel.selectWorkspace(ws.id)
-                                        showWorkspaceDrawer = false
+                                        scope.launch { drawerState.close() }
                                     }
                                     .border(
                                         width = 1.dp,
@@ -171,7 +166,7 @@ fun MainBrowserScreen(viewModel: BrowserViewModel) {
                                         "work" -> Icons.Default.Build
                                         "school" -> Icons.Default.Info
                                         "visibility_off" -> Icons.Default.Check
-                                        else -> Icons.Default.List
+                                        else -> Icons.AutoMirrored.Filled.List
                                     },
                                     contentDescription = ws.name,
                                     tint = wsColor,
@@ -249,7 +244,7 @@ fun MainBrowserScreen(viewModel: BrowserViewModel) {
                         },
                         onTabsClick = { showTabsSheet = true },
                         onMenuClick = { showExtensionsSheet = true },
-                        onWorkspaceClick = { showWorkspaceDrawer = true },
+                        onWorkspaceClick = { scope.launch { drawerState.open() } },
                         onHeartClick = { showBookmarksHistorySheet = true },
                         onShieldClick = { showPrivacyArmorSheet = true },
                         modifier = Modifier.navigationBarsPadding()
@@ -274,7 +269,7 @@ fun MainBrowserScreen(viewModel: BrowserViewModel) {
                         },
                         onTabsClick = { showTabsSheet = true },
                         onMenuClick = { showExtensionsSheet = true },
-                        onWorkspaceClick = { showWorkspaceDrawer = true },
+                        onWorkspaceClick = { scope.launch { drawerState.open() } },
                         onHeartClick = { showBookmarksHistorySheet = true },
                         onShieldClick = { showPrivacyArmorSheet = true },
                         modifier = Modifier.statusBarsPadding()
@@ -738,7 +733,7 @@ fun BrowserCommandLine(
                     .border(width = 1.dp, color = ZenOutlines, shape = RoundedCornerShape(12.dp))
             ) {
                 Icon(
-                    imageVector = Icons.Default.List,
+                    imageVector = Icons.AutoMirrored.Filled.List,
                     contentDescription = "Workspaces",
                     tint = ZenPurpleLight,
                     modifier = Modifier.size(20.dp)
@@ -927,7 +922,7 @@ fun ZenSpeedDialHome(
         ShortcutItem("Reddit", "https://reddit.com", Icons.Default.Favorite, Color(0xFFFF4500)),
         ShortcutItem("YouTube", "https://youtube.com", Icons.Default.PlayArrow, Color(0xFFFF0000)),
         ShortcutItem("Google", "https://google.com", Icons.Default.Search, Color(0xFF4285F4)),
-        ShortcutItem("Portal", "https://yahoo.com", Icons.Default.List, ZenPurpleLight)
+        ShortcutItem("Portal", "https://yahoo.com", Icons.AutoMirrored.Filled.List, ZenPurpleLight)
     )
 
     LazyColumn(
@@ -1438,7 +1433,7 @@ fun ExtensionsSheetContent(
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        Divider(color = ZenOutlines, thickness = 1.dp, modifier = Modifier.padding(bottom = 16.dp))
+        HorizontalDivider(color = ZenOutlines, thickness = 1.dp, modifier = Modifier.padding(bottom = 16.dp))
 
         // AdBloker eklenti simülatörü
         Row(
@@ -1711,7 +1706,7 @@ fun BookmarksHistoryContent(
                                 .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(imageVector = Icons.Default.List, contentDescription = "History", tint = ZenTeal, modifier = Modifier.size(18.dp))
+                            Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = "History", tint = ZenTeal, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(item.title, color = Color.White, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
