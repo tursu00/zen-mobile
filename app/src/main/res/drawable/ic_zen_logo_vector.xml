@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="66dp"
+    android:height="66dp"
+    android:viewportWidth="66"
+    android:viewportHeight="66">
+
+    <!-- Outer Arc (Symmetrical Concentric Swirl) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:pathData="M 45.73 20.27 A 18 18 0 1 1 20.27 45.73">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="15"
+                android:startY="15"
+                android:endX="51"
+                android:endY="51"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#3B82F6" />
+                <item android:offset="0.5" android:color="#60A5FA" />
+                <item android:offset="1.0" android:color="#00F5D4" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Inner Arc (Symmetrical Concentric Swirl) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:pathData="M 25.22 40.78 A 11 11 0 1 1 42.01 39.31">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="20"
+                android:startY="45"
+                android:endX="45"
+                android:endY="20"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#00F5D4" />
+                <item android:offset="0.5" android:color="#60A5FA" />
+                <item android:offset="1.0" android:color="#3B82F6" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+</vector>

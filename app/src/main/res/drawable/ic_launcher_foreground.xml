@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/zen_launcher_logo_1779572725555"
+        android:drawable="@drawable/ic_zen_logo_vector"
         android:gravity="center" />
 </layer-list>

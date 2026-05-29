@@ -26,6 +26,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -88,6 +91,7 @@ fun MainBrowserScreen(viewModel: BrowserViewModel) {
     var showExtensionsSheet by remember { mutableStateOf(false) }
     var showBookmarksHistorySheet by remember { mutableStateOf(false) }
     var showPrivacyArmorSheet by remember { mutableStateOf(false) }
+    var isToolbarVisible by remember { mutableStateOf(true) }
 
     // Loading & progress states
     var loadingProgress by remember { mutableStateOf(0) }
@@ -107,121 +111,256 @@ fun MainBrowserScreen(viewModel: BrowserViewModel) {
         }
     }
 
+    val toolbarFraction by animateDpAsState(
+        targetValue = if (isToolbarVisible) 0.dp else if (isBottomToolbar) 120.dp else (-120).dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "toolbar_offset"
+    )
+
     // Modern Drawer state
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
     ModalNavigationDrawer(
         drawerState = drawerState,
-        gesturesEnabled = false,
+        gesturesEnabled = true,
         drawerContent = {
             ModalDrawerSheet(
-                drawerContainerColor = ZenDarkBG,
-                drawerTonalElevation = 8.dp,
-                modifier = Modifier.width(280.dp)
+                drawerContainerColor = ZenDarkBG.copy(alpha = 0.98f),
+                drawerTonalElevation = 12.dp,
+                modifier = Modifier
+                    .width(320.dp)
+                    .fillMaxHeight()
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                ) {
-                    // Drawer Header
-                    Text(
-                        text = "Zen Workspace",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ZenPurpleLight,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Text(
-                        text = "Zen Browser ile sekmelerinizi farklı odak alanlarında gruplayın.",
-                        fontSize = 12.sp,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(bottom = 24.dp)
-                    )
+                Row(modifier = Modifier.fillMaxSize()) {
+                    // Left Column: Workspace Icons (68.dp wide)
+                    Column(
+                        modifier = Modifier
+                            .width(68.dp)
+                            .fillMaxHeight()
+                            .background(ZenCardBG.copy(alpha = 0.5f))
+                            .padding(vertical = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Title or Small Logo
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(ZenPurple.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Z", color = ZenPurpleLight, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                        }
 
-                    HorizontalDivider(color = ZenOutlines, thickness = 1.dp, modifier = Modifier.padding(bottom = 16.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                    // Workspace Item List
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(workspaces) { ws ->
+                        // List of workspaces
+                        workspaces.forEach { ws ->
                             val isSelected = ws.id == currentWorkspaceId
                             val wsColor = Color(android.graphics.Color.parseColor(ws.colorHex))
                             
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) ZenCardBG else Color.Transparent)
-                                    .clickable {
-                                        viewModel.selectWorkspace(ws.id)
-                                        scope.launch { drawerState.close() }
-                                    }
-                                    .border(
-                                        width = 1.dp,
-                                        color = if (isSelected) wsColor.copy(alpha = 0.5f) else Color.Transparent,
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            Box(
+                                modifier = Modifier.size(52.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                // Dynamic theme icon simulation
-                                Icon(
-                                    imageVector = when(ws.iconName) {
-                                        "home" -> Icons.Default.Home
-                                        "work" -> Icons.Default.Build
-                                        "school" -> Icons.Default.Info
-                                        "visibility_off" -> Icons.Default.Check
-                                        else -> Icons.AutoMirrored.Filled.List
-                                    },
-                                    contentDescription = ws.name,
-                                    tint = wsColor,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Column {
-                                    Text(
-                                        text = ws.name,
-                                        fontSize = 15.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) Color.White else Color.LightGray
+                                // Dynamic theme indicator line
+                                if (isSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.CenterStart)
+                                            .width(4.dp)
+                                            .height(28.dp)
+                                            .clip(RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp))
+                                            .background(wsColor)
                                     )
-                                    if (isSelected) {
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(if (isSelected) 12.dp else 22.dp))
+                                        .background(if (isSelected) wsColor.copy(alpha = 0.25f) else ZenDarkBG)
+                                        .border(
+                                            width = 1.5.dp,
+                                            color = if (isSelected) wsColor else ZenOutlines,
+                                            shape = RoundedCornerShape(if (isSelected) 12.dp else 22.dp)
+                                        )
+                                        .clickable { viewModel.selectWorkspace(ws.id) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = when(ws.iconName) {
+                                            "home" -> Icons.Default.Home
+                                            "work" -> Icons.Default.Build
+                                            "school" -> Icons.Default.Info
+                                            "visibility_off" -> Icons.Default.Check
+                                            else -> Icons.AutoMirrored.Filled.List
+                                        },
+                                        contentDescription = ws.name,
+                                        tint = if (isSelected) wsColor else Color.Gray,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        // Shield Info Icon
+                        IconButton(
+                            onClick = { showPrivacyArmorSheet = true },
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(ZenDarkBG)
+                        ) {
+                            Icon(Icons.Default.Info, contentDescription = "Zırh", tint = ZenTeal, modifier = Modifier.size(18.dp))
+                        }
+                    }
+
+                    // Right Column: Vertical Tabs list (remaining width: ~252.dp)
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .padding(16.dp)
+                    ) {
+                        // Header
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val activeWorkspace = workspaces.find { it.id == currentWorkspaceId }
+                            val wsColor = activeWorkspace?.let { Color(android.graphics.Color.parseColor(it.colorHex)) } ?: ZenPurpleLight
+                            
+                            Text(
+                                text = activeWorkspace?.name ?: "Dikey Sekmeler",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+
+                            // Sleek Add/Plus button to immediately spawn a new tab
+                            IconButton(
+                                onClick = { viewModel.addNewTab(currentWorkspaceId) },
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(wsColor.copy(alpha = 0.2f))
+                                    .border(1.dp, wsColor.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Yeni Sekme", tint = wsColor, modifier = Modifier.size(16.dp))
+                            }
+                        }
+
+                        Text(
+                            text = "Açık Zen Sekmeleri (${tabs.size})",
+                            fontSize = 11.sp,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // List of Vertical Tabs
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            items(tabs) { tab ->
+                                val isTabActive = tab.isActive
+                                
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (isTabActive) ZenCardBG else Color.Transparent)
+                                        .border(
+                                            width = 1.dp,
+                                            color = if (isTabActive) ZenPurple.copy(alpha = 0.5f) else ZenOutlines,
+                                            shape = RoundedCornerShape(12.dp)
+                                        )
+                                        .clickable {
+                                            viewModel.selectTab(tab.id)
+                                            scope.launch { drawerState.close() }
+                                        }
+                                        .padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Custom Favicon display container inside Zen Sidebar
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(ZenDarkBG),
+                                        contentAlignment = Alignment.Center
+                                    ) {
                                         Text(
-                                            text = "Aktif Alan",
-                                            fontSize = 10.sp,
-                                            color = wsColor,
-                                            fontWeight = FontWeight.Bold
+                                            text = if (tab.title.isNotEmpty()) tab.title.take(1).uppercase() else "Z",
+                                            color = if (isTabActive) ZenTeal else Color.LightGray,
+                                            fontWeight = FontWeight.Black,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(10.dp))
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (tab.title.isNotEmpty()) tab.title else "Yükleniyor...",
+                                            color = if (isTabActive) Color.White else Color.LightGray,
+                                            fontSize = 13.sp,
+                                            fontWeight = if (isTabActive) FontWeight.Bold else FontWeight.Normal,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = if (tab.url.startsWith("https://")) tab.url.removePrefix("https://") else tab.url.removePrefix("http://"),
+                                            color = Color.Gray,
+                                            fontSize = 9.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+
+                                    // Hover close button
+                                    IconButton(
+                                        onClick = { viewModel.closeTab(tab.id) },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Sekmeyi Kapat",
+                                            tint = if (isTabActive) ZenTeal else Color.Gray,
+                                            modifier = Modifier.size(12.dp)
                                         )
                                     }
                                 }
                             }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.weight(1.0f))
-
-                    // Sidebar lower telemetry
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = ZenCardBG),
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = "Shield",
-                                    tint = ZenTeal,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Güvenlik Raporu", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Engellenen İzleyici: $blockedTrackersCount", fontSize = 12.sp, color = ZenTeal, fontWeight = FontWeight.Bold)
-                            Text("Zen koruması aktif. Kişisel verileriniz Firefox Gecko güvencesinde saklanır.", fontSize = 10.sp, color = Color.Gray)
+                        // Footer
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(ZenCardBG)
+                                .padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Info, contentDescription = "Kalkan", tint = ZenTeal, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Kalkan devrede. $blockedTrackersCount engellendi.",
+                                fontSize = 10.sp,
+                                color = ZenTeal,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
@@ -230,116 +369,77 @@ fun MainBrowserScreen(viewModel: BrowserViewModel) {
     ) {
         Scaffold(
             containerColor = ZenDarkBG,
-            contentWindowInsets = WindowInsets.safeDrawing,
-            bottomBar = {
-                if (isBottomToolbar) {
-                    BrowserCommandLine(
-                        url = addressInputText,
-                        onUrlChange = { addressInputText = it },
-                        activeTab = activeTab,
-                        tabsCount = tabs.size,
-                        blockedCount = blockedTrackersCount,
-                        isPageLoading = isPageLoading,
-                        onBackPressed = { viewModel.triggerBackNavigation() },
-                        onInputFocused = { /* Keep tracking */ },
-                        onGoClick = {
-                            viewModel.loadUrl(addressInputText)
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
-                        },
-                        onTabsClick = { showTabsSheet = true },
-                        onMenuClick = { showExtensionsSheet = true },
-                        onWorkspaceClick = { scope.launch { drawerState.open() } },
-                        onHeartClick = { showBookmarksHistorySheet = true },
-                        onShieldClick = { showPrivacyArmorSheet = true },
-                        modifier = Modifier.navigationBarsPadding()
-                    )
-                }
-            },
-            topBar = {
-                if (!isBottomToolbar) {
-                    BrowserCommandLine(
-                        url = addressInputText,
-                        onUrlChange = { addressInputText = it },
-                        activeTab = activeTab,
-                        tabsCount = tabs.size,
-                        blockedCount = blockedTrackersCount,
-                        isPageLoading = isPageLoading,
-                        onBackPressed = { viewModel.triggerBackNavigation() },
-                        onInputFocused = { /* Tracking */ },
-                        onGoClick = {
-                            viewModel.loadUrl(addressInputText)
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
-                        },
-                        onTabsClick = { showTabsSheet = true },
-                        onMenuClick = { showExtensionsSheet = true },
-                        onWorkspaceClick = { scope.launch { drawerState.open() } },
-                        onHeartClick = { showBookmarksHistorySheet = true },
-                        onShieldClick = { showPrivacyArmorSheet = true },
-                        modifier = Modifier.statusBarsPadding()
-                    )
-                }
-            }
+            contentWindowInsets = WindowInsets(0, 0, 0, 0)
         ) { padding ->
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                // Smooth load progress indicator
-                AnimatedVisibility(
-                    visible = isPageLoading,
-                    enter = fadeIn(),
-                    exit = fadeOut()
+                Column(
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    LinearProgressIndicator(
-                        progress = { loadingProgress / 100f },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(3.dp),
-                        color = ZenTeal,
-                        trackColor = ZenDarkBG
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f)
-                ) {
-                    // Check if there is an active loading URL OR if we are on empty speed-dial
-                    val isSpeedDial = activeTab == null || activeTab?.url == "https://duckduckgo.com"
-                    
-                    if (isSpeedDial) {
-                        ZenSpeedDialHome(
-                            blockedTrackers = blockedTrackersCount,
-                            onSearchLaunch = { query ->
-                                addressInputText = query
-                                viewModel.loadUrl(query)
-                            },
-                            quickBookmarks = bookmarks,
-                            selectedSearchEngine = selectedSearchEngine,
-                            onSearchEngineSelected = { viewModel.setSearchEngine(it) }
+                    // Smooth load progress indicator
+                    AnimatedVisibility(
+                        visible = isPageLoading,
+                        enter = fadeIn(),
+                        exit = fadeOut()
+                    ) {
+                        LinearProgressIndicator(
+                            progress = { loadingProgress / 100f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(3.dp),
+                            color = ZenTeal,
+                            trackColor = ZenDarkBG
                         )
-                    } else {
-                        // Render full customized web container
-                        activeTab?.let { tab ->
-                            WebViewContainer(
-                                tab = tab,
-                                viewModel = viewModel,
-                                extensions = extensions,
-                                onProgressChanged = { loadingProgress = it },
-                                onLoadingStateChanged = { isPageLoading = it },
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } ?: Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("Bir sekme açın veya aramaya başlayın")
-                        }
                     }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f)
+                    ) {
+                        // Check if there is an active loading URL OR if we are on empty speed-dial
+                        val isSpeedDial = activeTab == null || activeTab?.url == "https://duckduckgo.com"
+                        
+                        // Force toolbar to be visible when on homepage
+                        LaunchedEffect(isSpeedDial) {
+                            if (isSpeedDial) {
+                                isToolbarVisible = true
+                            }
+                        }
+
+                        if (isSpeedDial) {
+                            ZenSpeedDialHome(
+                                blockedTrackers = blockedTrackersCount,
+                                onSearchLaunch = { query ->
+                                    addressInputText = query
+                                    viewModel.loadUrl(query)
+                                },
+                                quickBookmarks = bookmarks,
+                                selectedSearchEngine = selectedSearchEngine,
+                                onSearchEngineSelected = { viewModel.setSearchEngine(it) }
+                            )
+                        } else {
+                            // Render full customized web container
+                            activeTab?.let { tab ->
+                                WebViewContainer(
+                                    tab = tab,
+                                    viewModel = viewModel,
+                                    extensions = extensions,
+                                    onProgressChanged = { loadingProgress = it },
+                                    onLoadingStateChanged = { isPageLoading = it },
+                                    onScrollStateChanged = { isToolbarVisible = it },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } ?: Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Bir sekme açın veya aramaya başlayın")
+                            }
+                        }
 
                     // --- AI Powered Engines Routing status indicator ---
                     androidx.compose.animation.AnimatedVisibility(
@@ -592,11 +692,45 @@ fun MainBrowserScreen(viewModel: BrowserViewModel) {
                             }
                         }
                     }
+
+                    // Floating Translucent glassmorphic Command Line Bar with Spring-animated offset
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        contentAlignment = if (isBottomToolbar) Alignment.BottomCenter else Alignment.TopCenter
+                    ) {
+                        BrowserCommandLine(
+                            url = addressInputText,
+                            onUrlChange = { addressInputText = it },
+                            activeTab = activeTab,
+                            tabsCount = tabs.size,
+                            blockedCount = blockedTrackersCount,
+                            isPageLoading = isPageLoading,
+                            onBackPressed = { viewModel.triggerBackNavigation() },
+                            onInputFocused = { /* Keep tracking */ },
+                            onGoClick = {
+                                viewModel.loadUrl(addressInputText)
+                                focusManager.clearFocus()
+                                keyboardController?.hide()
+                            },
+                            onTabsClick = { scope.launch { drawerState.open() } },
+                            onMenuClick = { showExtensionsSheet = true },
+                            onWorkspaceClick = { scope.launch { drawerState.open() } },
+                            onHeartClick = { showBookmarksHistorySheet = true },
+                            onShieldClick = { showPrivacyArmorSheet = true },
+                            modifier = Modifier
+                                .offset(y = toolbarFraction)
+                                .navigationBarsPadding()
+                                .statusBarsPadding()
+                        )
+                    }
                 }
             }
         }
+    }
 
-        // 1. Sleek Tabs Manager Bottom Sheet
+    // 1. Sleek Tabs Manager Bottom Sheet
         if (showTabsSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showTabsSheet = false },

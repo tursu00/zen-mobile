@@ -389,7 +389,9 @@ class BrowserViewModel(private val repository: BrowserRepository) : ViewModel() 
 
     // Block telemetry analytics
     fun incrementTrackerCount(amount: Int = 1) {
-        _blockedTrackersCount.value += amount
+        viewModelScope.launch {
+            _blockedTrackersCount.value += amount
+        }
     }
 
     fun resetTrackerCount() {
